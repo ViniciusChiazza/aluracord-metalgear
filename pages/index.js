@@ -40,7 +40,6 @@ export default function PaginaInicial() {
   // const username = 'ViniciusChiazza';
     const [username, setUsername] = React.useState('ViniciusChiazza');
     const roteamento = useRouter();
-    console.log(username.length)
 
   return (
     <>
@@ -79,7 +78,7 @@ export default function PaginaInicial() {
              if (username.length <= 2) {
                roteamento.push('/404');
              } else {
-               roteamento.push('/chat');
+               roteamento.push(`/chat?username=${username}`);
              }
               
             }}
@@ -107,7 +106,7 @@ export default function PaginaInicial() {
            />*/}
             <TextField
               value={username}
-              onChange={function (event) {
+              onChange={function Handler(event) {
                console.log('usuario digitou', event.target.value);
                // Onde esta o valor?
                const valor = event.target.value;
@@ -115,6 +114,7 @@ export default function PaginaInicial() {
                // Troca valor através do React e avisa quem precisa a troca
                setUsername(valor);
               }}
+              placeholder="Digite seu user Github"
               fullWidth
               textFieldColors={{
                 neutral: {
@@ -172,7 +172,7 @@ export default function PaginaInicial() {
                 borderRadius: '1000px'
               }}
             >
-              {username}
+              {username.length > 2 ? `${username}` : 'Usuário inválido'}
             </Text>
           </Box>
           {/* Photo Area */}
