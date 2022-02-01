@@ -3,13 +3,24 @@ import React, { useEffect, useState } from "react";
 import appConfig from "../config.json";
 import { useRouter } from 'next/router';
 import { createClient } from '@supabase/supabase-js'
+import { ButtonSendSticker } from '../src/components/ButtonSendSticker';
 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MzM5NDcyMCwiZXhwIjoxOTU4OTcwNzIwfQ.sPj9G74phO_8s6GE0S_J1QaJ7zTGsbr0O1RgMakXZXc';
 const SUPABASE_URL = 'https://hqoetokljuhbrnryyyhk.supabase.co';
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+function escutaMensagensEmTempoReal(adicionaMensagem) {
+  return supabaseClient
+  .from('mensagens')
+  .on('INSERT', (respostaLive) => {
+    adicionaMensagem(respostaLive.new);
+    
+  })
+  .subscribe();
+}
+
 export default function ChatPage() {
-  // Sua lógica vai aqui
+  
   supabaseClient
     .from('mensagens')
     .select('*')
@@ -17,21 +28,44 @@ export default function ChatPage() {
       console.log('Dados da consulta:', dados);
     });
 
-  const [mensagem, setMensagem] = useState("");
-  const [listaDeMensagens, setListaDeMensagens] = useState([]);
   const roteamento = useRouter();
   const { username } = roteamento.query;
+  const [mensagem, setMensagem] = useState("");
+  const [listaDeMensagens, setListaDeMensagens] = useState([]);
 
+  
   useEffect(() => {
     supabaseClient
       .from('mensagens')
       .select('*')
       .order('id', {ascending: false })
       .then(({ data }) => {
-        console.log('Dados da consulta:', data);
         setListaDeMensagens(data);
-      });
-  }, []);
+          });
+
+          const subscription = escutaMensagensEmTempoReal((novaMensagem) => {
+            console.log('Nova mensagem:', novaMensagem);
+            console.log('listaDeMensagens:', listaDeMensagens);
+            // Quero reusar um valor de referencia (objeto/array) 
+            // Passar uma função pro setState
+      
+            // setListaDeMensagens([
+            //     novaMensagem,
+            //     ...listaDeMensagens
+            // ])
+            setListaDeMensagens((valorAtualDaLista) => {
+              console.log('valorAtualDaLista:', valorAtualDaLista);
+              return [
+                novaMensagem,
+                ...valorAtualDaLista,
+              ]
+            });
+          });
+      
+          return () => {
+            subscription.unsubscribe();
+          }
+        }, []);
 
   function handleNovaMensagem(novaMensagem) {
     const mensagem = {
@@ -47,12 +81,7 @@ export default function ChatPage() {
       .then(({ data }) => {
         console.log('Criando mensagem: ', data);
         // Chamada de um backend
-        setListaDeMensagens([
-            data[0],
-            ...listaDeMensagens, 
-        ]);
       })
-      
       setMensagem("");
   }
 
@@ -148,18 +177,30 @@ export default function ChatPage() {
                 color: appConfig.theme.colors.neutrals[200],
               }}
             />
+            
+            <ButtonSendSticker 
+              onStickerClick={(sticker) => {
+                console.log('[USANDO O COMPONENTE] Salva esse sticker no banco')
+                handleNovaMensagem(':sticker: ' + sticker);
+              }}
+
+            />
+            
+            
             <Button
               type="submit"
-              label="Enviar"
+              label="↵"
               onClick={(event) => {
                 event.preventDefault();
                 {mensagem.length > 0 ? handleNovaMensagem(mensagem) : alert('Preencha o campo de texto para enviar a mensagem')};
               }}
               styleSheet={{
-                width: "5%",
-                borderRadius: "5px",
+                width: "3%",
+                borderRadius: "1000px",
                 height: "75%",
-                marginBottom: "8px"
+                marginBottom: "8px",
+                marginLeft: "8px"
+
               }}
               buttonColors={{
                 contrastColor: appConfig.theme.colors.neutrals[999],
@@ -271,7 +312,15 @@ function MessageList(props) {
                 }}
               ></Icon>
             </Box>
-            {mensagem.texto}
+                {mensagem.texto.startsWith(':sticker:')
+               ? (  
+                    <Image src={mensagem.texto.replace(':sticker:', '')} />
+               )
+                : ( 
+                    mensagem.texto
+                )}
+
+          {/* {mensagem.texto} */}
           </Text>
         );
       })}
